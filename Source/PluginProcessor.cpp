@@ -24,7 +24,10 @@ MemoryLadAudioProcessor::MemoryLadAudioProcessor()
                      #endif
                        )
 #endif
+    // MemoryBoy has 550ms of delay time, use the same value here
+    : mDelayBufferDur(0.550), mDelayBuffer()
 {
+    mDelayBufferIdx = 0;
 }
 
 MemoryLadAudioProcessor::~MemoryLadAudioProcessor()
@@ -87,8 +90,9 @@ void MemoryLadAudioProcessor::changeProgramName (int index, const String& newNam
 //==============================================================================
 void MemoryLadAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    // Initialize the delay buffer
+    mDelayBufferLen = (int) (mDelayBufferDur * sampleRate);
+    mDelayBuffer.setSize(getTotalNumOutputChannels(), mDelayBufferLen);
 }
 
 void MemoryLadAudioProcessor::releaseResources()
@@ -124,25 +128,34 @@ bool MemoryLadAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
 {
     const int totalNumInputChannels  = getTotalNumInputChannels();
-    const int totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    // Read the input channels. Assumes that there are an equal number of 
+    // input and output channels.
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    int iDelayBuffer;
+    for (int iChannel = 0; iChannel < totalNumInputChannels; ++iChannel)
     {
-        float* channelData = buffer.getWritePointer (channel);
+        iDelayBuffer = mDelayBufferIdx;
 
-        // ..do something to the data...
+        float* delayBuffer = mDelayBuffer.getWritePointer(iChannel);
+        float* channelBuffer = buffer.getWritePointer(iChannel);
+
+        for (int iSample = 0; iSample < buffer.getNumSamples(); ++iSample)
+        {
+            // Read sample from the input buffer
+            float s = channelBuffer[iSample];
+
+            // Write sample to the output buffer from the delay buffer
+            channelBuffer[iSample] = delayBuffer[iDelayBuffer];
+
+            // Write sample from the input buffer to the delay buffer
+            delayBuffer[iDelayBuffer] = s;
+
+            // Advance the delay buffer index
+            iDelayBuffer = (iDelayBuffer+1) % (mDelayBufferLen-1);
+        }
     }
+    mDelayBufferIdx = iDelayBuffer;
 }
 
 //==============================================================================
