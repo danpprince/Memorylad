@@ -64,6 +64,8 @@ private:
     const double mDelayBufferDur;
     int mDelayBufferIdx;
     int mDelayBufferLen;
+    AudioParameterFloat* mDelayFeedback;
+    AudioParameterFloat* mDelayMix;
 };
 
 

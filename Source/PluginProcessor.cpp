@@ -25,9 +25,23 @@ MemoryLadAudioProcessor::MemoryLadAudioProcessor()
                        )
 #endif
     // MemoryBoy has 550ms of delay time, use the same value here
-    : mDelayBufferDur(0.550), mDelayBuffer()
+    : mDelayBuffer(),
+      mDelayBufferDur(0.550)
 {
     mDelayBufferIdx = 0;
+    addParameter (mDelayFeedback = new AudioParameterFloat (
+                                           "feedback", // Parameter ID
+                                           "Feedback", // Parameter name
+                                           0.0f,       // Min value
+                                           1.0f,       // Max value
+                                           0.2f));     // Default value
+
+    addParameter (mDelayMix = new AudioParameterFloat (
+                                           "mix",  // Parameter ID
+                                           "Mix",  // Parameter name
+                                           0.0f,   // Min value
+                                           1.0f,   // Max value
+                                           0.3f)); // Default value
 }
 
 MemoryLadAudioProcessor::~MemoryLadAudioProcessor()
@@ -143,13 +157,16 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
         for (int iSample = 0; iSample < buffer.getNumSamples(); ++iSample)
         {
             // Read sample from the input buffer
-            float s = channelBuffer[iSample];
+            float inSample = channelBuffer[iSample];
 
             // Write sample to the output buffer from the delay buffer
-            channelBuffer[iSample] = delayBuffer[iDelayBuffer];
+            channelBuffer[iSample] 
+                = (*mDelayMix) * delayBuffer[iDelayBuffer] 
+                + (1 - *mDelayMix) * inSample;
 
             // Write sample from the input buffer to the delay buffer
-            delayBuffer[iDelayBuffer] = s;
+            delayBuffer[iDelayBuffer] 
+                = inSample + (*mDelayFeedback) * delayBuffer[iDelayBuffer];
 
             // Advance the delay buffer index
             iDelayBuffer = (iDelayBuffer+1) % (mDelayBufferLen-1);
