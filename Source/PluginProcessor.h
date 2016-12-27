@@ -61,9 +61,11 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MemoryLadAudioProcessor)
 
     AudioSampleBuffer mDelayBuffer;
+    double mSampleRate;
     const double mDelayBufferDur;
     int mDelayBufferIdx;
     int mDelayBufferLen;
+    AudioParameterFloat* mDelayTime;
     AudioParameterFloat* mDelayFeedback;
     AudioParameterFloat* mDelayMix;
 };

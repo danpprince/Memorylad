@@ -26,9 +26,15 @@ MemoryLadAudioProcessor::MemoryLadAudioProcessor()
 #endif
     // MemoryBoy has 550ms of delay time, use the same value here
     : mDelayBuffer(),
-      mDelayBufferDur(0.550)
+      mDelayBufferDur(550)
 {
     mDelayBufferIdx = 0;
+    addParameter (mDelayTime = new AudioParameterFloat (
+                                           "delay_time", // Parameter ID
+                                           "Delay Time", // Parameter name
+                                           NormalisableRange<float> (10.0f, 550.0f), // Param range
+                                           0.5f));       // Default value
+
     addParameter (mDelayFeedback = new AudioParameterFloat (
                                            "feedback", // Parameter ID
                                            "Feedback", // Parameter name
@@ -104,9 +110,10 @@ void MemoryLadAudioProcessor::changeProgramName (int index, const String& newNam
 //==============================================================================
 void MemoryLadAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Initialize the delay buffer
-    mDelayBufferLen = (int) (mDelayBufferDur * sampleRate);
+    // Initialize the delay buffer. Convert mDelayBufferDur from ms to seconds.
+    mDelayBufferLen = (int) (mDelayBufferDur / 1000.0 * sampleRate);
     mDelayBuffer.setSize(getTotalNumOutputChannels(), mDelayBufferLen);
+    mSampleRate = sampleRate;
 }
 
 void MemoryLadAudioProcessor::releaseResources()
@@ -146,27 +153,38 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
     // Read the input channels. Assumes that there are an equal number of 
     // input and output channels.
 
+    // Calculate the number of samples to delay based on the parameter value
+    int delaySamples = (*mDelayTime) / 1000.0 * mSampleRate;
+
     int iDelayBuffer;
     for (int iChannel = 0; iChannel < totalNumInputChannels; ++iChannel)
     {
         iDelayBuffer = mDelayBufferIdx;
-
         float* delayBuffer = mDelayBuffer.getWritePointer(iChannel);
         float* channelBuffer = buffer.getWritePointer(iChannel);
 
         for (int iSample = 0; iSample < buffer.getNumSamples(); ++iSample)
         {
+            // Get the index in the delay buffer for the current output sample and
+            // wrap around the beginning of the buffer if the index is negative
+            int iDelayOutput = iDelayBuffer - delaySamples;
+            if (iDelayOutput < 0.0) 
+            {
+                iDelayOutput = mDelayBufferLen + iDelayOutput;
+            }
+
             // Read sample from the input buffer
             float inSample = channelBuffer[iSample];
 
             // Write sample to the output buffer from the delay buffer
             channelBuffer[iSample] 
-                = (*mDelayMix) * delayBuffer[iDelayBuffer] 
+                = (*mDelayMix) * delayBuffer[iDelayOutput] 
                 + (1 - *mDelayMix) * inSample;
 
-            // Write sample from the input buffer to the delay buffer
+            // Write sample from the input buffer to the delay buffer plus its
+            // current value scaled by the feedback parameter
             delayBuffer[iDelayBuffer] 
-                = inSample + (*mDelayFeedback) * delayBuffer[iDelayBuffer];
+                = inSample + (*mDelayFeedback) * delayBuffer[iDelayOutput];
 
             // Advance the delay buffer index
             iDelayBuffer = (iDelayBuffer+1) % (mDelayBufferLen-1);
