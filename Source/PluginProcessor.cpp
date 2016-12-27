@@ -196,12 +196,13 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
 //==============================================================================
 bool MemoryLadAudioProcessor::hasEditor() const
 {
-    return true; // (change this to false if you choose to not supply an editor)
+    return false; // (change this to false if you choose to not supply an editor)
 }
 
 AudioProcessorEditor* MemoryLadAudioProcessor::createEditor()
 {
-    return new MemoryLadAudioProcessorEditor (*this);
+    return NULL;
+    // return new MemoryLadAudioProcessorEditor (*this);
 }
 
 //==============================================================================
