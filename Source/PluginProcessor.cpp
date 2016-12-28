@@ -110,10 +110,20 @@ void MemoryLadAudioProcessor::changeProgramName (int index, const String& newNam
 //==============================================================================
 void MemoryLadAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    mSampleRate = sampleRate;
+    int nOutputChannels = getTotalNumOutputChannels();
+
     // Initialize the delay buffer. Convert mDelayBufferDur from ms to seconds.
     mDelayBufferLen = (int) (mDelayBufferDur / 1000.0 * sampleRate);
-    mDelayBuffer.setSize(getTotalNumOutputChannels(), mDelayBufferLen);
-    mSampleRate = sampleRate;
+    mDelayBuffer.setSize(nOutputChannels, mDelayBufferLen);
+    for (int iChannel = 0; iChannel < nOutputChannels; ++iChannel)
+    {
+        float* channelBuffer = mDelayBuffer.getWritePointer(iChannel);
+        for (int iSample = 0; iSample < mDelayBuffer.getNumSamples(); ++iSample)
+        {
+            channelBuffer[iSample] = 0.0f;
+        }
+    }
 }
 
 void MemoryLadAudioProcessor::releaseResources()
