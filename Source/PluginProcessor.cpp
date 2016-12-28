@@ -189,17 +189,17 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
             }
 
             // Read sample from the input buffer
-            float inSample = channelBuffer[iSample];
+            float inputSample = channelBuffer[iSample];
 
             // Write sample from the input buffer to the delay buffer plus its
             // current value scaled by the feedback parameter
             delayBuffer[iDelayBuffer] 
-                = inSample + (*mDelayFeedback) * delayBuffer[iDelayOutput];
+                = inputSample + (*mDelayFeedback) * delayBuffer[iDelayOutput];
 
             // Write sample to the output buffer from the delay buffer
             channelBuffer[iSample] 
                 = (*mDelayMix) * delayBuffer[iDelayOutput] 
-                + (1 - *mDelayMix) * inSample;
+                + (1 - *mDelayMix) * inputSample;
 
             // Advance the delay buffer index
             iDelayBuffer = (iDelayBuffer+1) % (mDelayBufferLen-1);
