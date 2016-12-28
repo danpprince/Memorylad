@@ -24,16 +24,20 @@ MemoryLadAudioProcessor::MemoryLadAudioProcessor()
                      #endif
                        )
 #endif
-    // MemoryBoy has 550ms of delay time, use the same value here
     : mDelayBuffer(),
-      mDelayBufferDur(550)
+      // MemoryBoy has 550ms of delay time, use the same value here
+      mDelayBufferDur(550),
+      // 1 pole IIR LPF coefficient selected for 50 sample decay between
+      // abrupt changes in delay time parameter
+      mDelayTimeFilterCoeff(0.05f),
+      mDelayTimeFilterOutput(200.0f)
 {
     mDelayBufferIdx = 0;
     addParameter (mDelayTime = new AudioParameterFloat (
                                            "delay_time", // Parameter ID
                                            "Delay Time", // Parameter name
                                            NormalisableRange<float> (10.0f, 550.0f), // Param range
-                                           0.5f));       // Default value
+                                           mDelayTimeFilterOutput));       // Default value
 
     addParameter (mDelayFeedback = new AudioParameterFloat (
                                            "feedback", // Parameter ID
@@ -158,23 +162,24 @@ bool MemoryLadAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 
 void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
 {
-    const int totalNumInputChannels  = getTotalNumInputChannels();
-
     // Read the input channels. Assumes that there are an equal number of 
     // input and output channels.
-
-    // Calculate the number of samples to delay based on the parameter value
-    int delaySamples = (*mDelayTime) / 1000.0 * mSampleRate;
+    const int totalNumInputChannels = getTotalNumInputChannels();
 
     int iDelayBuffer;
+    float delayTimeOutput;
     for (int iChannel = 0; iChannel < totalNumInputChannels; ++iChannel)
     {
         iDelayBuffer = mDelayBufferIdx;
+        delayTimeOutput = mDelayTimeFilterOutput;
         float* delayBuffer = mDelayBuffer.getWritePointer(iChannel);
         float* channelBuffer = buffer.getWritePointer(iChannel);
 
         for (int iSample = 0; iSample < buffer.getNumSamples(); ++iSample)
         {
+            // Calculate the number of samples to delay based on the parameter value
+            int delaySamples = delayTimeOutput / 1000.0 * mSampleRate;
+
             // Get the index in the delay buffer for the current output sample and
             // wrap around the beginning of the buffer if the index is negative
             int iDelayOutput = iDelayBuffer - delaySamples;
@@ -186,21 +191,28 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
             // Read sample from the input buffer
             float inSample = channelBuffer[iSample];
 
-            // Write sample to the output buffer from the delay buffer
-            channelBuffer[iSample] 
-                = (*mDelayMix) * delayBuffer[iDelayOutput] 
-                + (1 - *mDelayMix) * inSample;
-
             // Write sample from the input buffer to the delay buffer plus its
             // current value scaled by the feedback parameter
             delayBuffer[iDelayBuffer] 
                 = inSample + (*mDelayFeedback) * delayBuffer[iDelayOutput];
 
+            // Write sample to the output buffer from the delay buffer
+            channelBuffer[iSample] 
+                = (*mDelayMix) * delayBuffer[iDelayOutput] 
+                + (1 - *mDelayMix) * inSample;
+
             // Advance the delay buffer index
             iDelayBuffer = (iDelayBuffer+1) % (mDelayBufferLen-1);
+
+            // Update the delay time using a one pole IIR filter to smooth
+            // any abrupt parameter changes
+            delayTimeOutput 
+                = mDelayTimeFilterCoeff * delayTimeOutput 
+                + (1 - mDelayTimeFilterCoeff) * (*mDelayTime);
         }
     }
     mDelayBufferIdx = iDelayBuffer;
+    mDelayTimeFilterOutput = delayTimeOutput;
 }
 
 //==============================================================================
