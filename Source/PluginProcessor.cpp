@@ -27,17 +27,17 @@ MemoryLadAudioProcessor::MemoryLadAudioProcessor()
     : mDelayBuffer(),
       // MemoryBoy has 550ms of delay time, use the same value here
       mDelayBufferDur(550),
-      // 1 pole IIR LPF coefficient selected for 50 sample decay between
-      // abrupt changes in delay time parameter
-      mDelayTimeFilterCoeff(0.05f),
-      mDelayTimeFilterOutput(200.0f)
+      // 1 pole IIR LPF coefficient selected to provide an exponential ramp
+      // on abrupt delay time parameter changes
+      mDelayTimeFilterCoeff(0.999f),
+      mDelayTimeSmoothed(200.0f)
 {
     mDelayBufferIdx = 0;
     addParameter (mDelayTime = new AudioParameterFloat (
                                            "delay_time", // Parameter ID
                                            "Delay Time", // Parameter name
                                            NormalisableRange<float> (10.0f, 550.0f), // Param range
-                                           mDelayTimeFilterOutput));       // Default value
+                                           mDelayTimeSmoothed));       // Default value
 
     addParameter (mDelayFeedback = new AudioParameterFloat (
                                            "feedback", // Parameter ID
@@ -167,52 +167,58 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
     const int totalNumInputChannels = getTotalNumInputChannels();
 
     int iDelayBuffer;
-    float delayTimeOutput;
+    float smoothedDelayTime;
     for (int iChannel = 0; iChannel < totalNumInputChannels; ++iChannel)
     {
         iDelayBuffer = mDelayBufferIdx;
-        delayTimeOutput = mDelayTimeFilterOutput;
+        smoothedDelayTime = mDelayTimeSmoothed;
         float* delayBuffer = mDelayBuffer.getWritePointer(iChannel);
         float* channelBuffer = buffer.getWritePointer(iChannel);
 
         for (int iSample = 0; iSample < buffer.getNumSamples(); ++iSample)
         {
             // Calculate the number of samples to delay based on the parameter value
-            int delaySamples = delayTimeOutput / 1000.0 * mSampleRate;
+            float delaySamples = smoothedDelayTime / 1000.0 * mSampleRate;
 
             // Get the index in the delay buffer for the current output sample and
             // wrap around the beginning of the buffer if the index is negative
-            int iDelayOutput = iDelayBuffer - delaySamples;
-            if (iDelayOutput < 0.0) 
+            float iCurrentDelay = iDelayBuffer - delaySamples;
+            if (iCurrentDelay < 0.0f) 
             {
-                iDelayOutput = mDelayBufferLen + iDelayOutput;
+                iCurrentDelay = mDelayBufferLen + iCurrentDelay;
             }
+
+            // Get the two samples adjacent to the index for use in interpolation
+            float y[2];
+            y[0] = delayBuffer[(int) iCurrentDelay];
+            y[1] = delayBuffer[((int)(iCurrentDelay+1)) % (mDelayBufferLen-1)];
+            float interpSample = y[0] + (y[1] - y[0]) * (iCurrentDelay - floor(iCurrentDelay));
 
             // Read sample from the input buffer
             float inputSample = channelBuffer[iSample];
+            float outputSample = (*mDelayMix) * interpSample 
+                               + (1 - (*mDelayMix)) * inputSample;
 
             // Write sample from the input buffer to the delay buffer plus its
             // current value scaled by the feedback parameter
-            delayBuffer[iDelayBuffer] 
-                = inputSample + (*mDelayFeedback) * delayBuffer[iDelayOutput];
+            delayBuffer[(int) iDelayBuffer] 
+                = inputSample + (*mDelayFeedback) * interpSample;
 
             // Write sample to the output buffer from the delay buffer
-            channelBuffer[iSample] 
-                = (*mDelayMix) * delayBuffer[iDelayOutput] 
-                + (1 - *mDelayMix) * inputSample;
+            channelBuffer[iSample] = outputSample;
 
             // Advance the delay buffer index
             iDelayBuffer = (iDelayBuffer+1) % (mDelayBufferLen-1);
 
             // Update the delay time using a one pole IIR filter to smooth
             // any abrupt parameter changes
-            delayTimeOutput 
-                = mDelayTimeFilterCoeff * delayTimeOutput 
+            smoothedDelayTime 
+                = mDelayTimeFilterCoeff * smoothedDelayTime 
                 + (1 - mDelayTimeFilterCoeff) * (*mDelayTime);
         }
     }
     mDelayBufferIdx = iDelayBuffer;
-    mDelayTimeFilterOutput = delayTimeOutput;
+    mDelayTimeSmoothed = smoothedDelayTime;
 }
 
 //==============================================================================

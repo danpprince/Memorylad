@@ -69,7 +69,7 @@ private:
     AudioParameterFloat* mDelayFeedback;
     AudioParameterFloat* mDelayMix;
     const float mDelayTimeFilterCoeff;
-    float mDelayTimeFilterOutput;
+    float mDelayTimeSmoothed;
 };
 
 
