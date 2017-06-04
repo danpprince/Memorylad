@@ -39,8 +39,12 @@ private:
     // access the processor object that created it.
     MemoryLadAudioProcessor& mProcessor;
     
+    Slider mDelayMixSlider;
     Slider mDelayTimeSlider;
+    Slider mDelayFeedbackSlider;
+    Label mDelayMixLabel;
     Label mDelayTimeLabel;
+    Label mDelayFeedbackLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MemoryLadAudioProcessorEditor)
 };

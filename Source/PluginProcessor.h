@@ -58,7 +58,8 @@ public:
     
     //==============================================================================
     AudioParameterFloat* mDelayTime;
-
+    AudioParameterFloat* mDelayFeedback;
+    AudioParameterFloat* mDelayMix;
 
 private:
     //==============================================================================
@@ -69,8 +70,7 @@ private:
     const double mDelayBufferDur;
     int mDelayBufferIdx;
     int mDelayBufferLen;
-    AudioParameterFloat* mDelayFeedback;
-    AudioParameterFloat* mDelayMix;
+
     const float mDelayTimeFilterCoeff;
     float mDelayTimeSmoothed;
 };
