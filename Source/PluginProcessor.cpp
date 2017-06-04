@@ -1,4 +1,4 @@
-/*
+	/*
   ==============================================================================
 
     This file was auto-generated!
@@ -224,13 +224,12 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
 //==============================================================================
 bool MemoryLadAudioProcessor::hasEditor() const
 {
-    return false; // (change this to false if you choose to not supply an editor)
+    return true; // (change this to false if you choose to not supply an editor)
 }
 
 AudioProcessorEditor* MemoryLadAudioProcessor::createEditor()
 {
-    return NULL;
-    // return new MemoryLadAudioProcessorEditor (*this);
+    return new MemoryLadAudioProcessorEditor (*this);
 }
 
 //==============================================================================

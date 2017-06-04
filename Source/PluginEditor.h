@@ -18,7 +18,9 @@
 //==============================================================================
 /**
 */
-class MemoryLadAudioProcessorEditor  : public AudioProcessorEditor
+class MemoryLadAudioProcessorEditor  : public AudioProcessorEditor,
+                                       private Slider::Listener,
+                                       private Timer
 {
 public:
     MemoryLadAudioProcessorEditor (MemoryLadAudioProcessor&);
@@ -27,11 +29,18 @@ public:
     //==============================================================================
     void paint (Graphics&) override;
     void resized() override;
+    
+    void timerCallback() override;
 
 private:
+    void sliderValueChanged (Slider* slider) override;
+    
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
-    MemoryLadAudioProcessor& processor;
+    MemoryLadAudioProcessor& mProcessor;
+    
+    Slider mDelayTimeSlider;
+    Label mDelayTimeLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MemoryLadAudioProcessorEditor)
 };

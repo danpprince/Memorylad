@@ -55,6 +55,10 @@ public:
     //==============================================================================
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    
+    //==============================================================================
+    AudioParameterFloat* mDelayTime;
+
 
 private:
     //==============================================================================
@@ -65,7 +69,6 @@ private:
     const double mDelayBufferDur;
     int mDelayBufferIdx;
     int mDelayBufferLen;
-    AudioParameterFloat* mDelayTime;
     AudioParameterFloat* mDelayFeedback;
     AudioParameterFloat* mDelayMix;
     const float mDelayTimeFilterCoeff;
