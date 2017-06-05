@@ -20,6 +20,8 @@ MemoryLadAudioProcessorEditor::MemoryLadAudioProcessorEditor (MemoryLadAudioProc
     // editor's size to whatever you need it to be.
     setSize (400, 200);
 
+    setLookAndFeel(&lookAndFeel);
+
     // Define the parameters of the sliders
     mDelayMixSlider.setRange (0.0f, 1.0f);
     mDelayMixSlider.setTextBoxStyle (Slider::TextBoxBelow, false, 100, 20);
