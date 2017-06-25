@@ -208,7 +208,7 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
             channelBuffer[iSample] = outputSample;
 
             // Advance the delay buffer index
-            iDelayBuffer = (iDelayBuffer+1) % (mDelayBufferLen-1);
+            iDelayBuffer = (iDelayBuffer+1) % mDelayBufferLen;
 
             // Update the delay time using a one pole IIR filter to smooth
             // any abrupt parameter changes
