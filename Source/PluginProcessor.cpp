@@ -168,6 +168,7 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
 
     int iDelayBuffer;
     float smoothedDelayTime;
+    float paramDelayTime = *mDelayTime;
     for (int iChannel = 0; iChannel < totalNumInputChannels; ++iChannel)
     {
         iDelayBuffer = mDelayBufferIdx;
@@ -190,19 +191,19 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
 
             // Get the two samples adjacent to the index for use in interpolation
             float y[2];
-            y[0] = delayBuffer[(int) iCurrentDelay];
+            y[0] = delayBuffer[ (int) iCurrentDelay];
             y[1] = delayBuffer[((int)(iCurrentDelay+1)) % (mDelayBufferLen-1)];
             float interpSample = y[0] + (y[1] - y[0]) * (iCurrentDelay - floor(iCurrentDelay));
 
             // Read sample from the input buffer
             float inputSample = channelBuffer[iSample];
-            float outputSample = (*mDelayMix) * interpSample 
-                               + (1 - (*mDelayMix)) * inputSample;
+            float outputSample 
+                = (     *mDelayMix)  * interpSample 
+                + (1 - (*mDelayMix)) * inputSample;
 
             // Write sample from the input buffer to the delay buffer plus its
             // current value scaled by the feedback parameter
-            delayBuffer[(int) iDelayBuffer] 
-                = inputSample + (*mDelayFeedback) * interpSample;
+            delayBuffer[iDelayBuffer] = inputSample + (*mDelayFeedback) * interpSample;
 
             // Write sample to the output buffer from the delay buffer
             channelBuffer[iSample] = outputSample;
@@ -214,7 +215,7 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
             // any abrupt parameter changes
             smoothedDelayTime 
                 = mDelayTimeFilterCoeff * smoothedDelayTime 
-                + (1 - mDelayTimeFilterCoeff) * (*mDelayTime);
+                + (1 - mDelayTimeFilterCoeff) * paramDelayTime;
         }
     }
     mDelayBufferIdx = iDelayBuffer;
