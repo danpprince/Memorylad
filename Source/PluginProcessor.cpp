@@ -195,15 +195,17 @@ void MemoryLadAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffe
             y[1] = delayBuffer[((int)(iCurrentDelay+1)) % (mDelayBufferLen-1)];
             float interpSample = y[0] + (y[1] - y[0]) * (iCurrentDelay - floor(iCurrentDelay));
 
+            float driveSample = tubeDistortion(interpSample);
+
             // Read sample from the input buffer
             float inputSample = channelBuffer[iSample];
             float outputSample 
-                = (     *mDelayMix)  * interpSample 
+                = (     *mDelayMix)  * driveSample
                 + (1 - (*mDelayMix)) * inputSample;
 
             // Write sample from the input buffer to the delay buffer plus its
             // current value scaled by the feedback parameter
-            delayBuffer[iDelayBuffer] = inputSample + (*mDelayFeedback) * interpSample;
+            delayBuffer[iDelayBuffer] = inputSample + (*mDelayFeedback) * driveSample;
 
             // Write sample to the output buffer from the delay buffer
             channelBuffer[iSample] = outputSample;
@@ -253,3 +255,14 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new MemoryLadAudioProcessor();
 }
+
+//==============================================================================
+double MemoryLadAudioProcessor::tubeDistortion(double input) 
+{
+    float bias  = -0.1;
+    float drive =  2.0;
+
+    return (input - bias) / (1 - exp(-1 * drive * (input - bias)))
+           + bias / (1 - exp(drive * bias));
+}
+

@@ -73,6 +73,8 @@ private:
 
     const float mDelayTimeFilterCoeff;
     float mDelayTimeSmoothed;
+
+    double tubeDistortion(double input);
 };
 
 
